@@ -85,8 +85,8 @@ class DownloadJob:
     id: str
     start_url: str
     output_dir: str
-    max_pages: int
-    max_depth: int
+    max_pages: int  # <= 0 means unlimited
+    max_depth: int  # < 0 means unlimited
     same_domain_only: bool
     respect_robots: bool
     status: str = "queued"  # queued -> running -> completed | error | cancelled
@@ -158,7 +158,7 @@ class SiteDownloader:
         self.queued_pages.add(normalize_url(job.start_url))
 
         try:
-            while queue and job.pages_done < job.max_pages:
+            while queue and (job.max_pages <= 0 or job.pages_done < job.max_pages):
                 if job._stop_requested:
                     job.status = "cancelled"
                     job.log_line("Cancelled by user.")
@@ -181,13 +181,15 @@ class SiteDownloader:
                     continue
 
                 job.pages_done += 1
+                depth_ok_unlimited = job.max_depth < 0
+                pages_ok_unlimited = job.max_pages <= 0
                 for link, link_depth in new_links:
                     lnorm = normalize_url(link)
                     if (
                         lnorm not in self.visited_pages
                         and lnorm not in self.queued_pages
-                        and link_depth <= job.max_depth
-                        and len(self.queued_pages) < job.max_pages * 4
+                        and (depth_ok_unlimited or link_depth <= job.max_depth)
+                        and (pages_ok_unlimited or len(self.queued_pages) < job.max_pages * 4)
                     ):
                         self.queued_pages.add(lnorm)
                         queue.append((link, link_depth))

@@ -17,20 +17,27 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 JOBS_DIR = os.path.join(BASE_DIR, "jobs")
 os.makedirs(JOBS_DIR, exist_ok=True)
 
-MAX_PAGES_CAP = 500
-MAX_DEPTH_CAP = 8
-
 app = Flask(__name__)
 JOBS: dict[str, DownloadJob] = {}
 JOBS_LOCK = threading.Lock()
 
 
-def _clamp(value, low, high, default):
+def _parse_pages(value, default=50):
+    """0 (or blank/negative) means unlimited pages."""
     try:
         value = int(value)
     except (TypeError, ValueError):
         return default
-    return max(low, min(high, value))
+    return max(0, value)
+
+
+def _parse_depth(value, default=3):
+    """A negative value means unlimited depth."""
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        return default
+    return value if value >= 0 else -1
 
 
 @app.route("/")
@@ -51,8 +58,8 @@ def start_job():
     if not parts.netloc:
         return jsonify({"error": "That doesn't look like a valid URL."}), 400
 
-    max_pages = _clamp(data.get("max_pages"), 1, MAX_PAGES_CAP, 50)
-    max_depth = _clamp(data.get("max_depth"), 0, MAX_DEPTH_CAP, 3)
+    max_pages = _parse_pages(data.get("max_pages"))
+    max_depth = _parse_depth(data.get("max_depth"))
     same_domain_only = str(data.get("same_domain_only", "true")).lower() not in ("false", "0", "no")
     respect_robots = str(data.get("respect_robots", "true")).lower() not in ("false", "0", "no")
 

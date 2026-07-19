@@ -73,11 +73,20 @@ h1 {
   display: block;
   margin-bottom: 16px;
 }
-.field span {
+.field > span {
   display: block;
   font-size: 0.9rem;
   color: var(--muted);
   margin-bottom: 6px;
+}
+.field-label {
+  display: flex !important;
+  align-items: baseline;
+  gap: 6px;
+}
+.field-label small {
+  font-size: 0.78rem;
+  opacity: 0.75;
 }
 .field input[type="text"],
 .field input[type="number"] {

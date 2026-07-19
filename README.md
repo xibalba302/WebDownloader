@@ -12,7 +12,9 @@ Arabic (and other) typography is preserved in the offline copy too.
 
 ## Features
 
-- Crawls same-domain pages up to a configurable depth/page limit
+- Crawls same-domain pages up to a configurable depth/page limit — set
+  `Max pages` to `0` or `Max link depth` to `-1` for no limit (crawl the
+  entire reachable site)
 - Downloads HTML, CSS, JS, images, fonts, media and rewrites:
   - `<a href>`, `<img src/srcset>`, `<link href>`, `<script src>`,
     `<source>`, `<video>`, `<audio>`, `<iframe>`, `<object>`
@@ -58,10 +60,14 @@ download it as a ZIP.
 ## Responsible use
 
 This tool fetches pages like a normal browser would. Please only archive
-sites you own or have permission to copy, keep `Respect robots.txt`
-enabled unless you have a specific reason not to, and avoid pointing it
-at very large sites with a huge `Max pages` value — be considerate of the
-target server's bandwidth.
+sites you own or have permission to copy, and keep `Respect robots.txt`
+enabled unless you have a specific reason not to.
+
+`Max pages` and `Max link depth` have no upper bound — setting either to
+unlimited (`0` / `-1`) means the crawl only stops when it runs out of
+same-domain pages to find, or when you click **Cancel**. On a large site
+that can mean a lot of requests and disk space, so use unlimited crawls
+considerately and keep an eye on the progress log.
 
 ## How it works
 
