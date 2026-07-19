@@ -29,6 +29,23 @@ Arabic (and other) typography is preserved in the offline copy too.
 
 ## Install & run
 
+### Windows
+
+Double-click **`build.bat`** (or run it from a terminal). It will:
+
+1. Find your Python installation (installs nothing itself — if Python
+   isn't found it points you to https://www.python.org/downloads/)
+2. Create a local virtual environment in `.\venv` (first run only)
+3. Download/install all dependencies into that virtual environment
+4. Start the app and open http://127.0.0.1:5000 in your browser automatically
+
+Subsequent runs reuse the existing `venv` and skip straight to installing
+(a no-op if nothing changed) and launching — just double-click `build.bat`
+again any time you want to use the app. Close the console window (or press
+Ctrl+C in it) to stop the server.
+
+### macOS / Linux
+
 ```bash
 pip install -r requirements.txt
 python app.py
