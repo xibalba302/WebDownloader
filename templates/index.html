@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en" dir="ltr" id="html-root">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WebDownloader &mdash; Offline Site Downloader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <h1 data-i18n="title">WebDownloader</h1>
+    <button id="lang-toggle" class="lang-btn" type="button">العربية</button>
+  </header>
+
+  <p class="subtitle" data-i18n="subtitle">
+    Download a full website and browse it offline &mdash; all links, images, styles and fonts rewritten to work without internet.
+  </p>
+
+  <section class="card">
+    <form id="job-form">
+      <label class="field">
+        <span data-i18n="labelUrl">Website URL</span>
+        <input id="url" name="url" type="text" placeholder="https://example.com" required>
+      </label>
+
+      <div class="grid-2">
+        <label class="field">
+          <span data-i18n="labelMaxPages">Max pages</span>
+          <input id="max_pages" name="max_pages" type="number" min="1" max="500" value="50">
+        </label>
+        <label class="field">
+          <span data-i18n="labelMaxDepth">Max link depth</span>
+          <input id="max_depth" name="max_depth" type="number" min="0" max="8" value="3">
+        </label>
+      </div>
+
+      <div class="grid-2 checkboxes">
+        <label class="checkbox">
+          <input id="same_domain_only" type="checkbox" checked>
+          <span data-i18n="labelSameDomain">Stay on the same domain</span>
+        </label>
+        <label class="checkbox">
+          <input id="respect_robots" type="checkbox" checked>
+          <span data-i18n="labelRobots">Respect robots.txt</span>
+        </label>
+      </div>
+
+      <button id="start-btn" class="primary-btn" type="submit" data-i18n="startBtn">Start download</button>
+    </form>
+    <p class="hint" data-i18n="hint">Only download sites you own or have permission to archive.</p>
+  </section>
+
+  <section id="progress-card" class="card hidden">
+    <div class="progress-header">
+      <h2 data-i18n="progressTitle">Progress</h2>
+      <span id="status-badge" class="badge">queued</span>
+    </div>
+    <div class="stats">
+      <div class="stat"><span id="pages-done">0</span><label data-i18n="statPages">pages</label></div>
+      <div class="stat"><span id="assets-done">0</span><label data-i18n="statAssets">assets</label></div>
+      <div class="stat"><span id="errors-count">0</span><label data-i18n="statErrors">errors</label></div>
+    </div>
+    <div class="current-action" id="current-action"></div>
+    <pre id="log-box" class="log-box"></pre>
+    <div class="actions">
+      <button id="cancel-btn" class="secondary-btn" type="button" data-i18n="cancelBtn">Cancel</button>
+      <a id="browse-link" class="secondary-btn hidden" href="#" target="_blank" data-i18n="browseBtn">Browse offline copy</a>
+      <a id="download-link" class="primary-btn hidden" href="#" data-i18n="downloadBtn">Download ZIP</a>
+    </div>
+  </section>
+</div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

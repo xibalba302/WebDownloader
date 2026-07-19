@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+jobs/*
+!jobs/.gitkeep
+*.zip
+.DS_Store
