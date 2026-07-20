@@ -23,8 +23,10 @@ Arabic (and other) typography is preserved in the offline copy too.
   - inline `style="..."` attributes and `<style>` blocks
 - Leaves out-of-scope external links pointing at the live site so
   navigation "off the archive" still works
-- Optional `robots.txt` compliance (on by default) and a polite delay
-  between requests
+- Optional `robots.txt` compliance (on by default)
+- Pages and assets download concurrently (6 pages / 10 assets at a time
+  by default) instead of one request at a time, so crawls finish
+  significantly faster
 - Live progress log, cancel button, one-click ZIP download, and an
   in-browser "browse offline copy" preview
 - Simple, bilingual (EN/AR) responsive UI, light/dark aware
@@ -56,6 +58,15 @@ python app.py
 Then open http://127.0.0.1:5000, enter a URL, and click **Start download**.
 When it finishes you can browse the offline copy right in the browser or
 download it as a ZIP.
+
+## Where the downloaded files go
+
+Each download is saved to disk under `jobs/<job-id>/site/` next to the
+app (e.g. `jobs/a1b2c3d4e5f6/site/example.com/index.html`), and zipped up
+as `jobs/<job-id>/site.zip`. Once a job finishes, the app shows the full
+folder path under **Saved to:** in the progress panel (with a **Copy**
+button) so you can open it directly in Explorer/Finder, in addition to
+the **Download ZIP** and **Browse offline copy** buttons.
 
 ## Responsible use
 

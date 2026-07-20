@@ -21,6 +21,9 @@ const I18N = {
     langBtn: "العربية",
     invalidUrl: "Please enter a valid URL.",
     startFailed: "Could not start the download.",
+    savedTo: "Saved to:",
+    copyBtn: "Copy",
+    copiedBtn: "Copied!",
   },
   ar: {
     title: "ويب داونلودر",
@@ -44,6 +47,9 @@ const I18N = {
     langBtn: "English",
     invalidUrl: "الرجاء إدخال رابط صحيح.",
     startFailed: "تعذّر بدء التنزيل.",
+    savedTo: "مكان الحفظ:",
+    copyBtn: "نسخ",
+    copiedBtn: "تم النسخ!",
   },
 };
 
@@ -81,6 +87,9 @@ const logBox = document.getElementById("log-box");
 const cancelBtn = document.getElementById("cancel-btn");
 const browseLink = document.getElementById("browse-link");
 const downloadLink = document.getElementById("download-link");
+const folderPathRow = document.getElementById("folder-path-row");
+const folderPathText = document.getElementById("folder-path-text");
+const copyPathBtn = document.getElementById("copy-path-btn");
 
 let activeJobId = null;
 
@@ -117,6 +126,7 @@ form.addEventListener("submit", async (e) => {
     progressCard.classList.remove("hidden");
     browseLink.classList.add("hidden");
     downloadLink.classList.add("hidden");
+    folderPathRow.classList.add("hidden");
     cancelBtn.classList.remove("hidden");
     logBox.textContent = "";
     startPolling();
@@ -129,6 +139,21 @@ form.addEventListener("submit", async (e) => {
 cancelBtn.addEventListener("click", async () => {
   if (!activeJobId) return;
   await fetch(`/api/jobs/${activeJobId}/cancel`, { method: "POST" });
+});
+
+copyPathBtn.addEventListener("click", async () => {
+  const text = folderPathText.textContent;
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (err) {
+    // Clipboard API unavailable (e.g. no HTTPS/permission) - fall back silently.
+  }
+  const original = copyPathBtn.textContent;
+  copyPathBtn.textContent = I18N[currentLang].copiedBtn;
+  setTimeout(() => {
+    copyPathBtn.textContent = original;
+  }, 1500);
 });
 
 function startPolling() {
@@ -154,6 +179,10 @@ async function fetchStatus() {
       if (data.zip_ready) {
         downloadLink.href = `/api/jobs/${activeJobId}/download`;
         downloadLink.classList.remove("hidden");
+      }
+      if (data.output_dir) {
+        folderPathText.textContent = data.output_dir;
+        folderPathRow.classList.remove("hidden");
       }
     }
   }

@@ -1,4 +1,5 @@
 :root {
+  color-scheme: light;
   --bg: #f5f6fa;
   --card-bg: #ffffff;
   --text: #1d2129;
@@ -96,8 +97,10 @@ h1 {
   border-radius: 8px;
   font-size: 1rem;
   font-family: inherit;
-  background: #fff;
-  color: var(--text);
+  background: var(--card-bg);
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
 }
 .field input:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
 
@@ -211,6 +214,37 @@ h1 {
   text-align: left;
 }
 
+.folder-path {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-top: 12px;
+}
+.folder-path code {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 0.8rem;
+  color: var(--text);
+  word-break: break-all;
+  direction: ltr;
+  unicode-bidi: plaintext;
+}
+.copy-btn {
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.copy-btn:hover { background: var(--bg); }
+
 .actions {
   display: flex;
   gap: 10px;
@@ -221,13 +255,19 @@ h1 {
 
 @media (prefers-color-scheme: dark) {
   :root {
+    color-scheme: dark;
     --bg: #0e1117;
     --card-bg: #161b22;
     --text: #e6e6e6;
     --muted: #9aa4b2;
     --border: #2a303b;
   }
-  .field input { background: #0e1117; color: var(--text); }
+  .field input {
+    background: #0e1117;
+    color: var(--text) !important;
+    -webkit-text-fill-color: var(--text);
+    caret-color: var(--text);
+  }
   .secondary-btn { background: #1f2530; color: var(--text); }
   .secondary-btn:hover { background: #2a303b; }
   .lang-btn { background: #161b22; color: var(--text); }
