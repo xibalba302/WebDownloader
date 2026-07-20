@@ -28,12 +28,18 @@
 
       <div class="grid-2">
         <label class="field">
-          <span data-i18n="labelMaxPages">Max pages</span>
-          <input id="max_pages" name="max_pages" type="number" min="1" max="500" value="50">
+          <span class="field-label">
+            <span data-i18n="labelMaxPages">Max pages</span>
+            <small data-i18n="hintPages">(0 = unlimited)</small>
+          </span>
+          <input id="max_pages" name="max_pages" type="number" min="0" value="50">
         </label>
         <label class="field">
-          <span data-i18n="labelMaxDepth">Max link depth</span>
-          <input id="max_depth" name="max_depth" type="number" min="0" max="8" value="3">
+          <span class="field-label">
+            <span data-i18n="labelMaxDepth">Max link depth</span>
+            <small data-i18n="hintDepth">(-1 = unlimited)</small>
+          </span>
+          <input id="max_depth" name="max_depth" type="number" min="-1" value="3">
         </label>
       </div>
 
@@ -65,6 +71,11 @@
     </div>
     <div class="current-action" id="current-action"></div>
     <pre id="log-box" class="log-box"></pre>
+    <div id="folder-path-row" class="folder-path hidden">
+      <span data-i18n="savedTo">Saved to:</span>
+      <code id="folder-path-text"></code>
+      <button id="copy-path-btn" type="button" class="copy-btn" data-i18n="copyBtn">Copy</button>
+    </div>
     <div class="actions">
       <button id="cancel-btn" class="secondary-btn" type="button" data-i18n="cancelBtn">Cancel</button>
       <a id="browse-link" class="secondary-btn hidden" href="#" target="_blank" data-i18n="browseBtn">Browse offline copy</a>

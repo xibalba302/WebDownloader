@@ -12,7 +12,9 @@ Arabic (and other) typography is preserved in the offline copy too.
 
 ## Features
 
-- Crawls same-domain pages up to a configurable depth/page limit
+- Crawls same-domain pages up to a configurable depth/page limit — set
+  `Max pages` to `0` or `Max link depth` to `-1` for no limit (crawl the
+  entire reachable site)
 - Downloads HTML, CSS, JS, images, fonts, media and rewrites:
   - `<a href>`, `<img src/srcset>`, `<link href>`, `<script src>`,
     `<source>`, `<video>`, `<audio>`, `<iframe>`, `<object>`
@@ -21,13 +23,32 @@ Arabic (and other) typography is preserved in the offline copy too.
   - inline `style="..."` attributes and `<style>` blocks
 - Leaves out-of-scope external links pointing at the live site so
   navigation "off the archive" still works
-- Optional `robots.txt` compliance (on by default) and a polite delay
-  between requests
+- Optional `robots.txt` compliance (on by default)
+- Pages and assets download concurrently (6 pages / 10 assets at a time
+  by default) instead of one request at a time, so crawls finish
+  significantly faster
 - Live progress log, cancel button, one-click ZIP download, and an
   in-browser "browse offline copy" preview
 - Simple, bilingual (EN/AR) responsive UI, light/dark aware
 
 ## Install & run
+
+### Windows
+
+Double-click **`build.bat`** (or run it from a terminal). It will:
+
+1. Find your Python installation (installs nothing itself — if Python
+   isn't found it points you to https://www.python.org/downloads/)
+2. Create a local virtual environment in `.\venv` (first run only)
+3. Download/install all dependencies into that virtual environment
+4. Start the app and open http://127.0.0.1:5000 in your browser automatically
+
+Subsequent runs reuse the existing `venv` and skip straight to installing
+(a no-op if nothing changed) and launching — just double-click `build.bat`
+again any time you want to use the app. Close the console window (or press
+Ctrl+C in it) to stop the server.
+
+### macOS / Linux
 
 ```bash
 pip install -r requirements.txt
@@ -38,13 +59,26 @@ Then open http://127.0.0.1:5000, enter a URL, and click **Start download**.
 When it finishes you can browse the offline copy right in the browser or
 download it as a ZIP.
 
+## Where the downloaded files go
+
+Each download is saved to disk under `jobs/<job-id>/site/` next to the
+app (e.g. `jobs/a1b2c3d4e5f6/site/example.com/index.html`), and zipped up
+as `jobs/<job-id>/site.zip`. Once a job finishes, the app shows the full
+folder path under **Saved to:** in the progress panel (with a **Copy**
+button) so you can open it directly in Explorer/Finder, in addition to
+the **Download ZIP** and **Browse offline copy** buttons.
+
 ## Responsible use
 
 This tool fetches pages like a normal browser would. Please only archive
-sites you own or have permission to copy, keep `Respect robots.txt`
-enabled unless you have a specific reason not to, and avoid pointing it
-at very large sites with a huge `Max pages` value — be considerate of the
-target server's bandwidth.
+sites you own or have permission to copy, and keep `Respect robots.txt`
+enabled unless you have a specific reason not to.
+
+`Max pages` and `Max link depth` have no upper bound — setting either to
+unlimited (`0` / `-1`) means the crawl only stops when it runs out of
+same-domain pages to find, or when you click **Cancel**. On a large site
+that can mean a lot of requests and disk space, so use unlimited crawls
+considerately and keep an eye on the progress log.
 
 ## How it works
 
