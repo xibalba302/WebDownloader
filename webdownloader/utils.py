@@ -2,26 +2,54 @@
 import mimetypes
 import posixpath
 import re
-from urllib.parse import urlsplit, urlunsplit, quote
+from urllib.parse import urlsplit, urlunsplit, quote, unquote
 
 # Extensions that mean "server-rendered page" rather than a static asset.
 # We save the fetched (final, rendered) HTML but give it a plain .html name
 # so an offline browser doesn't try to execute it.
 _DYNAMIC_PAGE_EXTS = {".php", ".asp", ".aspx", ".jsp", ".jspx", ".cgi", ".pl", ".do"}
 
-_UNSAFE_CHARS = re.compile(r'[<>:"|?*\x00-\x1f]')
+# Characters that are illegal in file names (or a path separator) on common
+# platforms. Backslash and forward slash are included so a decoded segment
+# can never spill into a new directory level.
+_UNSAFE_CHARS = re.compile(r'[<>:"|?*\\/\x00-\x1f]')
 
 
 def normalize_url(url: str) -> str:
-    """Strip fragments and normalize so the same resource isn't fetched twice."""
+    """Strip fragments and normalize so the same resource isn't fetched twice.
+
+    The path is percent-decoded so the same page linked once with raw Arabic
+    (or any non-ASCII) characters and once percent-encoded is treated as a
+    single resource rather than two.
+    """
     parts = urlsplit(url)
-    path = parts.path or "/"
+    path = unquote(parts.path) or "/"
     return urlunsplit((parts.scheme.lower(), parts.netloc.lower(), path, parts.query, ""))
 
 
 def sanitize_segment(segment: str) -> str:
+    """Make one URL path segment safe to use as a real file/dir name.
+
+    Non-ASCII characters (e.g. Arabic) are intentionally kept as-is so the
+    file is stored under its true name; only characters that are illegal on
+    disk are stripped. Bare "." / ".." are neutralised to prevent a decoded
+    path segment from escaping the output directory.
+    """
     segment = _UNSAFE_CHARS.sub("_", segment)
+    segment = segment.rstrip(". ")  # Windows disallows trailing dot/space
+    if set(segment) <= {"."}:  # "", ".", ".." -> safe placeholder
+        return "_"
     return segment or "_"
+
+
+def encode_ref(rel_path: str) -> str:
+    """Percent-encode a relative link so it stays valid HTML/CSS but decodes
+    back to the exact on-disk (possibly non-ASCII) file name in the browser.
+
+    Path separators are preserved; everything a browser would choke on
+    (spaces, most punctuation, Unicode) is encoded.
+    """
+    return quote(rel_path, safe="/-_.~()")
 
 
 def query_suffix(query: str) -> str:
@@ -44,9 +72,10 @@ def url_to_local_path(url: str, is_page: bool, content_type: str = "") -> str:
     host = sanitize_segment(parts.netloc.lower())
     raw_path = parts.path or "/"
     ends_with_slash = raw_path.endswith("/")
-    # Drop the empty strings produced by leading/trailing/duplicate slashes;
-    # only real path segments remain.
-    segments = [sanitize_segment(quote(seg, safe="")) for seg in raw_path.split("/") if seg]
+    # Percent-decode each segment so the file is stored under its true
+    # (real UTF-8) name; drop the empty strings from leading/trailing/
+    # duplicate slashes so only real path segments remain.
+    segments = [sanitize_segment(unquote(seg)) for seg in raw_path.split("/") if seg]
 
     if is_page:
         if ends_with_slash or not segments:

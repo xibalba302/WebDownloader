@@ -27,6 +27,12 @@ Arabic (and other) typography is preserved in the offline copy too.
 - Rewrites every in-scope link to a relative path and every out-of-scope
   link to its absolute URL, so opening a saved page straight from disk
   never produces broken `C:\...` (drive-root) links
+- Handles non-ASCII (e.g. Arabic) URLs correctly: pages such as
+  `/category/إضاءات/` are stored under their real names and linked with
+  matching percent-encoding, so Arabic menu/category links open offline
+  instead of 404-ing
+- Shows the elapsed download time (live while running, final when done)
+  alongside the page/asset/error counts
 - Optional `robots.txt` compliance (on by default)
 - Pages and assets download concurrently (6 pages / 10 assets at a time
   by default) instead of one request at a time, so crawls finish

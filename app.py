@@ -9,7 +9,7 @@ import os
 import subprocess
 import sys
 import threading
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, quote
 
 from flask import Flask, jsonify, redirect, render_template, request, send_from_directory, abort
 
@@ -182,9 +182,11 @@ def browse_site(job_id, path):
     if not path:
         # Redirect to the entry file's real path so relative links inside it
         # (computed relative to that path) resolve correctly in the browser.
+        # Percent-encode so a non-ASCII (e.g. Arabic) entry path stays a valid
+        # URL that decodes back to the real on-disk file name.
         if not job.entry_path:
             abort(404)
-        return redirect(f"/site/{job_id}/{job.entry_path}")
+        return redirect(f"/site/{job_id}/{quote(job.entry_path)}")
     full = os.path.abspath(os.path.join(job.output_dir, path))
     if not full.startswith(os.path.abspath(job.output_dir) + os.sep):
         abort(403)
