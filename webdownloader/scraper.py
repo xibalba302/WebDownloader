@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import re
 import threading
+import time
 import uuid
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed, wait, FIRST_COMPLETED
 from dataclasses import dataclass, field
@@ -21,7 +22,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from bs4 import BeautifulSoup
 
-from .utils import normalize_url, url_to_local_path, relative_link
+from .utils import normalize_url, url_to_local_path, relative_link, encode_ref
 
 DEFAULT_USER_AGENT = "WebDownloaderBot/1.0 (+offline archiver; personal use)"
 
@@ -48,6 +49,19 @@ _CSS_IMPORT_RE = re.compile(
 
 _HEADER_CHARSET_RE = re.compile(r"charset=([\w-]+)", re.IGNORECASE)
 _META_CHARSET_RE = re.compile(rb'<meta[^>]+charset=["\']?\s*([\w-]+)', re.IGNORECASE)
+
+
+def _format_duration(seconds: Optional[float]) -> str:
+    """Human-friendly elapsed time, e.g. '4.2s' or '1m 07s'."""
+    if seconds is None:
+        return "0s"
+    if seconds < 60:
+        return f"{seconds:.1f}s"
+    minutes, secs = divmod(int(round(seconds)), 60)
+    if minutes < 60:
+        return f"{minutes}m {secs:02d}s"
+    hours, minutes = divmod(minutes, 60)
+    return f"{hours}h {minutes:02d}m {secs:02d}s"
 
 
 def _decode_html(raw: bytes, content_type: str) -> str:
@@ -97,8 +111,25 @@ class DownloadJob:
     entry_path: Optional[str] = None
     error_message: Optional[str] = None
     created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
+    _start_time: Optional[float] = None
+    _end_time: Optional[float] = None
     _stop_requested: bool = False
     _lock: threading.Lock = field(default_factory=threading.Lock)
+
+    def mark_started(self) -> None:
+        with self._lock:
+            self._start_time = time.monotonic()
+
+    def mark_finished(self) -> None:
+        with self._lock:
+            if self._end_time is None:  # first call wins (real completion time)
+                self._end_time = time.monotonic()
+
+    def elapsed_seconds(self) -> Optional[float]:
+        if self._start_time is None:
+            return None
+        end = self._end_time if self._end_time is not None else time.monotonic()
+        return round(end - self._start_time, 1)
 
     def log_line(self, message: str) -> None:
         with self._lock:
@@ -135,6 +166,7 @@ class DownloadJob:
                 "output_dir": self.output_dir,
                 "error_message": self.error_message,
                 "created_at": self.created_at,
+                "elapsed_seconds": self.elapsed_seconds(),
             }
 
     def request_stop(self) -> None:
@@ -204,6 +236,7 @@ class SiteDownloader:
     def run(self) -> None:
         job = self.job
         job.status = "running"
+        job.mark_started()
         job.log_line(f"Starting crawl of {job.start_url}")
         # Fixed up front (rather than "whichever page finishes first") so it
         # stays correct even though pages complete out of order.
@@ -253,8 +286,10 @@ class SiteDownloader:
             if job.status == "running":
                 executor.shutdown(wait=True)
                 job.status = "completed"
+                job.mark_finished()
                 job.log_line(
-                    f"Done. {job.pages_done} page(s), {job.assets_done} asset(s), "
+                    f"Done in {_format_duration(job.elapsed_seconds())}. "
+                    f"{job.pages_done} page(s), {job.assets_done} asset(s), "
                     f"{job.errors_count} error(s). Saved to: {job.output_dir}"
                 )
             else:
@@ -264,6 +299,7 @@ class SiteDownloader:
             job.error_message = str(exc)
             job.log_line(f"Fatal error: {exc}")
         finally:
+            job.mark_finished()
             self.asset_executor.shutdown(wait=False, cancel_futures=True)
 
     # ------------------------------------------------------------ robots
@@ -366,7 +402,7 @@ class SiteDownloader:
             tag, attr, abs_url = future_to_task[fut]
             try:
                 target_local = fut.result()
-                tag[attr] = relative_link(local_path, target_local)
+                tag[attr] = encode_ref(relative_link(local_path, target_local))
             except Exception as exc:  # noqa: BLE001
                 job.increment_errors()
                 job.log_line(f"Asset failed ({abs_url}): {exc}")
@@ -405,7 +441,9 @@ class SiteDownloader:
             if self._in_scope(abs_url):
                 new_page_links.append((abs_url, depth + 1))
                 target_local = url_to_local_path(abs_url, is_page=True)
-                a["href"] = relative_link(local_path, target_local) + (f"#{frag}" if frag else "")
+                a["href"] = encode_ref(relative_link(local_path, target_local)) + (
+                    f"#{frag}" if frag else ""
+                )
             else:
                 # Rewrite out-of-scope links to their absolute URL so a
                 # root-/protocol-relative href never resolves to the local
@@ -503,7 +541,7 @@ class SiteDownloader:
                 target_local = self._download_asset(abs_url)
             except Exception:  # noqa: BLE001
                 return f"url('{abs_url}')"
-            rel = relative_link(referrer_local_path, target_local)
+            rel = encode_ref(relative_link(referrer_local_path, target_local))
             return f"url('{rel}')"
 
         def replace_import(match: re.Match) -> str:
@@ -517,7 +555,7 @@ class SiteDownloader:
                 target_local = self._download_asset(abs_url)
             except Exception:  # noqa: BLE001
                 return f"@import url('{abs_url}')"
-            rel = relative_link(referrer_local_path, target_local)
+            rel = encode_ref(relative_link(referrer_local_path, target_local))
             return f"@import url('{rel}')"
 
         css_text = _CSS_IMPORT_RE.sub(replace_import, css_text)
@@ -536,7 +574,7 @@ class SiteDownloader:
             abs_url = urljoin(base_url, url_part)
             try:
                 target_local = self._download_asset(abs_url)
-                rel = relative_link(referrer_local_path, target_local)
+                rel = encode_ref(relative_link(referrer_local_path, target_local))
             except Exception:  # noqa: BLE001
                 rel = abs_url if abs_url.startswith(("http://", "https://")) else url_part
             parts.append(f"{rel} {descriptor}".strip())

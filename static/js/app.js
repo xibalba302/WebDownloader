@@ -17,6 +17,7 @@ const I18N = {
     statPages: "pages",
     statAssets: "assets",
     statErrors: "errors",
+    statTime: "time",
     cancelBtn: "Cancel",
     browseBtn: "Browse offline copy",
     openFolderBtn: "Open folder",
@@ -46,6 +47,7 @@ const I18N = {
     statPages: "صفحات",
     statAssets: "ملفات",
     statErrors: "أخطاء",
+    statTime: "الوقت",
     cancelBtn: "إلغاء",
     browseBtn: "تصفح النسخة غير المتصلة",
     openFolderBtn: "فتح المجلد",
@@ -88,6 +90,7 @@ const statusBadge = document.getElementById("status-badge");
 const pagesDone = document.getElementById("pages-done");
 const assetsDone = document.getElementById("assets-done");
 const errorsCount = document.getElementById("errors-count");
+const elapsedTime = document.getElementById("elapsed-time");
 const currentAction = document.getElementById("current-action");
 const logBox = document.getElementById("log-box");
 const cancelBtn = document.getElementById("cancel-btn");
@@ -220,12 +223,24 @@ async function fetchStatus() {
   }
 }
 
+function formatDuration(seconds) {
+  if (seconds === null || seconds === undefined) return "0s";
+  if (seconds < 60) return `${seconds.toFixed(1)}s`;
+  const total = Math.round(seconds);
+  const s = total % 60;
+  const m = Math.floor(total / 60) % 60;
+  const h = Math.floor(total / 3600);
+  const pad = (n) => String(n).padStart(2, "0");
+  return h > 0 ? `${h}h ${pad(m)}m ${pad(s)}s` : `${m}m ${pad(s)}s`;
+}
+
 function render(data) {
   statusBadge.textContent = data.status;
   statusBadge.className = "badge " + data.status;
   pagesDone.textContent = data.pages_done;
   assetsDone.textContent = data.assets_done;
   errorsCount.textContent = data.errors_count;
+  elapsedTime.textContent = formatDuration(data.elapsed_seconds);
   currentAction.textContent = data.current_action || "";
   logBox.textContent = (data.log || []).join("\n");
   logBox.scrollTop = logBox.scrollHeight;
