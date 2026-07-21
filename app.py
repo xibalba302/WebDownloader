@@ -6,16 +6,19 @@ Then open http://127.0.0.1:5000 in your browser.
 from __future__ import annotations
 
 import os
+import subprocess
+import sys
 import threading
 from urllib.parse import urlsplit
 
-from flask import Flask, jsonify, redirect, render_template, request, send_file, send_from_directory, abort
+from flask import Flask, jsonify, redirect, render_template, request, send_from_directory, abort
 
 from webdownloader.scraper import DownloadJob, SiteDownloader, new_job_id
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-JOBS_DIR = os.path.join(BASE_DIR, "jobs")
-os.makedirs(JOBS_DIR, exist_ok=True)
+# Default output location, used only when the user doesn't choose their own folder.
+DEFAULT_OUTPUT_ROOT = os.path.join(BASE_DIR, "downloads")
+os.makedirs(DEFAULT_OUTPUT_ROOT, exist_ok=True)
 
 app = Flask(__name__)
 JOBS: dict[str, DownloadJob] = {}
@@ -45,6 +48,58 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/api/pick-folder", methods=["POST"])
+def pick_folder():
+    """Open a native folder picker on the machine running the app.
+
+    Because the app runs locally, the picker (Tk) shows on the user's own
+    desktop. Runs in a short-lived subprocess so Tk stays out of Flask's
+    worker threads (Tk must own the main thread).
+    """
+    code = (
+        "import tkinter as tk\n"
+        "from tkinter import filedialog\n"
+        "root = tk.Tk()\n"
+        "root.withdraw()\n"
+        "root.attributes('-topmost', True)\n"
+        "path = filedialog.askdirectory(title='Choose download folder')\n"
+        "print(path or '')\n"
+    )
+    try:
+        result = subprocess.run(
+            [sys.executable, "-c", code],
+            capture_output=True, text=True, timeout=180,
+        )
+        # A non-zero exit means the picker itself failed to open (e.g. no
+        # display / Tk unavailable) rather than the user cancelling, which
+        # returns an empty path with a clean exit.
+        if result.returncode != 0:
+            return jsonify({"path": "", "error": result.stderr.strip() or "picker failed"})
+        return jsonify({"path": result.stdout.strip()})
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"path": "", "error": str(exc)})
+
+
+@app.route("/api/open-folder", methods=["POST"])
+def open_folder():
+    """Open a finished job's output folder in the OS file manager."""
+    data = request.get_json(silent=True) or {}
+    job = JOBS.get(data.get("job_id", ""))
+    if job is None or not os.path.isdir(job.output_dir):
+        return jsonify({"error": "Folder not found."}), 404
+    path = job.output_dir
+    try:
+        if sys.platform.startswith("win"):
+            os.startfile(path)  # noqa: S606 - local, trusted path
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", path])
+        else:
+            subprocess.Popen(["xdg-open", path])
+        return jsonify({"ok": True})
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"error": str(exc)}), 500
+
+
 @app.route("/api/jobs", methods=["POST"])
 def start_job():
     data = request.get_json(silent=True) or request.form
@@ -63,10 +118,24 @@ def start_job():
     same_domain_only = str(data.get("same_domain_only", "true")).lower() not in ("false", "0", "no")
     respect_robots = str(data.get("respect_robots", "true")).lower() not in ("false", "0", "no")
 
-    job_id = new_job_id()
-    output_dir = os.path.join(JOBS_DIR, job_id, "site")
-    os.makedirs(output_dir, exist_ok=True)
+    # Resolve the destination folder chosen by the user (or fall back to a
+    # default folder next to the app). The mirror is written under
+    # <destination>/<site-host>/..., so all links between pages stay relative
+    # and the whole folder can be moved or opened anywhere.
+    dest = (data.get("dest_dir") or "").strip()
+    if dest:
+        dest = os.path.abspath(os.path.expanduser(dest))
+    else:
+        dest = DEFAULT_OUTPUT_ROOT
+    try:
+        os.makedirs(dest, exist_ok=True)
+    except OSError as exc:
+        return jsonify({"error": f"Can't use that folder: {exc}"}), 400
+    if not os.access(dest, os.W_OK):
+        return jsonify({"error": "That folder isn't writable."}), 400
 
+    output_dir = dest
+    job_id = new_job_id()
     job = DownloadJob(
         id=job_id,
         start_url=start_url,
@@ -103,14 +172,6 @@ def cancel_job(job_id):
     return jsonify({"ok": True})
 
 
-@app.route("/api/jobs/<job_id>/download")
-def download_zip(job_id):
-    job = JOBS.get(job_id)
-    if job is None or not job.zip_path or not os.path.exists(job.zip_path):
-        abort(404)
-    return send_file(job.zip_path, as_attachment=True, download_name=f"{job_id}-offline-site.zip")
-
-
 @app.route("/site/<job_id>/", defaults={"path": ""})
 @app.route("/site/<job_id>/<path:path>")
 def browse_site(job_id, path):
@@ -124,8 +185,8 @@ def browse_site(job_id, path):
         if not job.entry_path:
             abort(404)
         return redirect(f"/site/{job_id}/{job.entry_path}")
-    full = os.path.join(job.output_dir, path)
-    if not os.path.abspath(full).startswith(os.path.abspath(job.output_dir)):
+    full = os.path.abspath(os.path.join(job.output_dir, path))
+    if not full.startswith(os.path.abspath(job.output_dir) + os.sep):
         abort(403)
     return send_from_directory(job.output_dir, path)
 

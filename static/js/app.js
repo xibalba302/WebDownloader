@@ -7,6 +7,8 @@ const I18N = {
     hintPages: "(0 = unlimited)",
     labelMaxDepth: "Max link depth",
     hintDepth: "(-1 = unlimited)",
+    labelDest: "Save to folder",
+    browseFolderBtn: "Browse…",
     labelSameDomain: "Stay on the same domain",
     labelRobots: "Respect robots.txt",
     startBtn: "Start download",
@@ -17,13 +19,14 @@ const I18N = {
     statErrors: "errors",
     cancelBtn: "Cancel",
     browseBtn: "Browse offline copy",
-    downloadBtn: "Download ZIP",
+    openFolderBtn: "Open folder",
     langBtn: "العربية",
     invalidUrl: "Please enter a valid URL.",
     startFailed: "Could not start the download.",
     savedTo: "Saved to:",
     copyBtn: "Copy",
     copiedBtn: "Copied!",
+    pickerUnavailable: "Couldn't open the folder picker. Type the folder path instead.",
   },
   ar: {
     title: "ويب داونلودر",
@@ -33,6 +36,8 @@ const I18N = {
     hintPages: "(0 = بلا حدود)",
     labelMaxDepth: "أقصى عمق للروابط",
     hintDepth: "(-1 = بلا حدود)",
+    labelDest: "حفظ في مجلد",
+    browseFolderBtn: "استعراض…",
     labelSameDomain: "الالتزام بنفس النطاق",
     labelRobots: "احترام ملف robots.txt",
     startBtn: "بدء التنزيل",
@@ -43,13 +48,14 @@ const I18N = {
     statErrors: "أخطاء",
     cancelBtn: "إلغاء",
     browseBtn: "تصفح النسخة غير المتصلة",
-    downloadBtn: "تنزيل الأرشيف (ZIP)",
+    openFolderBtn: "فتح المجلد",
     langBtn: "English",
     invalidUrl: "الرجاء إدخال رابط صحيح.",
     startFailed: "تعذّر بدء التنزيل.",
     savedTo: "مكان الحفظ:",
     copyBtn: "نسخ",
     copiedBtn: "تم النسخ!",
+    pickerUnavailable: "تعذّر فتح نافذة اختيار المجلد. اكتب مسار المجلد يدوياً.",
   },
 };
 
@@ -86,10 +92,12 @@ const currentAction = document.getElementById("current-action");
 const logBox = document.getElementById("log-box");
 const cancelBtn = document.getElementById("cancel-btn");
 const browseLink = document.getElementById("browse-link");
-const downloadLink = document.getElementById("download-link");
+const openFolderBtn = document.getElementById("open-folder-btn");
 const folderPathRow = document.getElementById("folder-path-row");
 const folderPathText = document.getElementById("folder-path-text");
 const copyPathBtn = document.getElementById("copy-path-btn");
+const destInput = document.getElementById("dest_dir");
+const browseFolderBtn = document.getElementById("browse-folder-btn");
 
 let activeJobId = null;
 
@@ -103,6 +111,7 @@ form.addEventListener("submit", async (e) => {
 
   const payload = {
     url,
+    dest_dir: destInput.value.trim(),
     max_pages: document.getElementById("max_pages").value,
     max_depth: document.getElementById("max_depth").value,
     same_domain_only: document.getElementById("same_domain_only").checked,
@@ -125,7 +134,7 @@ form.addEventListener("submit", async (e) => {
     activeJobId = data.job_id;
     progressCard.classList.remove("hidden");
     browseLink.classList.add("hidden");
-    downloadLink.classList.add("hidden");
+    openFolderBtn.classList.add("hidden");
     folderPathRow.classList.add("hidden");
     cancelBtn.classList.remove("hidden");
     logBox.textContent = "";
@@ -134,6 +143,32 @@ form.addEventListener("submit", async (e) => {
     alert(I18N[currentLang].startFailed);
     startBtn.disabled = false;
   }
+});
+
+browseFolderBtn.addEventListener("click", async () => {
+  browseFolderBtn.disabled = true;
+  try {
+    const res = await fetch("/api/pick-folder", { method: "POST" });
+    const data = await res.json();
+    if (data.path) {
+      destInput.value = data.path;
+    } else if (data.error) {
+      alert(I18N[currentLang].pickerUnavailable);
+    }
+  } catch (err) {
+    alert(I18N[currentLang].pickerUnavailable);
+  } finally {
+    browseFolderBtn.disabled = false;
+  }
+});
+
+openFolderBtn.addEventListener("click", async () => {
+  if (!activeJobId) return;
+  await fetch("/api/open-folder", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ job_id: activeJobId }),
+  });
 });
 
 cancelBtn.addEventListener("click", async () => {
@@ -176,10 +211,7 @@ async function fetchStatus() {
     if (data.status === "completed") {
       browseLink.href = `/site/${activeJobId}/`;
       browseLink.classList.remove("hidden");
-      if (data.zip_ready) {
-        downloadLink.href = `/api/jobs/${activeJobId}/download`;
-        downloadLink.classList.remove("hidden");
-      }
+      openFolderBtn.classList.remove("hidden");
       if (data.output_dir) {
         folderPathText.textContent = data.output_dir;
         folderPathRow.classList.remove("hidden");

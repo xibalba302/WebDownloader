@@ -43,6 +43,14 @@
         </label>
       </div>
 
+      <label class="field">
+        <span data-i18n="labelDest">Save to folder</span>
+        <span class="folder-input">
+          <input id="dest_dir" name="dest_dir" type="text" placeholder="/path/to/your/folder">
+          <button id="browse-folder-btn" type="button" class="secondary-btn" data-i18n="browseFolderBtn">Browse…</button>
+        </span>
+      </label>
+
       <div class="grid-2 checkboxes">
         <label class="checkbox">
           <input id="same_domain_only" type="checkbox" checked>
@@ -79,7 +87,7 @@
     <div class="actions">
       <button id="cancel-btn" class="secondary-btn" type="button" data-i18n="cancelBtn">Cancel</button>
       <a id="browse-link" class="secondary-btn hidden" href="#" target="_blank" data-i18n="browseBtn">Browse offline copy</a>
-      <a id="download-link" class="primary-btn hidden" href="#" data-i18n="downloadBtn">Download ZIP</a>
+      <button id="open-folder-btn" class="primary-btn hidden" type="button" data-i18n="openFolderBtn">Open folder</button>
     </div>
   </section>
 </div>
