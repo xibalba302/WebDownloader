@@ -6,3 +6,8 @@ downloads/
 jobs/
 *.zip
 .DS_Store
+
+# PyInstaller build artifacts
+build/
+dist/
+*.spec

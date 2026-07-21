@@ -42,7 +42,27 @@ Arabic (and other) typography is preserved in the offline copy too.
   file manager
 - Simple, bilingual (EN/AR) responsive UI, light/dark aware
 
-## Install & run
+## Build a standalone .exe (to share)
+
+To turn WebDownloader into a **single executable** that runs on any Windows
+PC with no Python installed, double-click **`build_exe.bat`** (or run
+`python build_exe.py`). It bundles the app, the web UI, and all
+dependencies with PyInstaller and produces:
+
+```
+dist\WebDownloader.exe
+```
+
+Copy that one file anywhere and double-click it — it starts the app and
+opens it in the default browser automatically. Close the console window to
+stop it. Downloads are saved to a `downloads` folder next to the .exe
+unless you pick another folder in the UI.
+
+> Build the .exe on the same OS you want to run it on (build on Windows for
+> a Windows `.exe`). The `build_exe.py` script also works on macOS/Linux,
+> producing a native single-file binary for that OS.
+
+## Install & run (from source)
 
 ### Windows
 

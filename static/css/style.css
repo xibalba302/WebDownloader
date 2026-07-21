@@ -36,14 +36,23 @@ html[dir="rtl"] body {
 
 .topbar {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
 }
 
+.brand { min-width: 0; }
+
 h1 {
   font-size: 1.6rem;
   margin: 0;
+}
+
+.tagline {
+  margin: 4px 0 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--primary);
 }
 
 .subtitle {
