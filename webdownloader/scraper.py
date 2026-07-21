@@ -10,7 +10,6 @@ import os
 import re
 import threading
 import uuid
-import zipfile
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed, wait, FIRST_COMPLETED
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -96,7 +95,6 @@ class DownloadJob:
     current_action: str = ""
     log: list = field(default_factory=list)
     entry_path: Optional[str] = None
-    zip_path: Optional[str] = None
     error_message: Optional[str] = None
     created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
     _stop_requested: bool = False
@@ -135,7 +133,6 @@ class DownloadJob:
                 "log": list(self.log[-60:]),
                 "entry_path": self.entry_path,
                 "output_dir": self.output_dir,
-                "zip_ready": self.zip_path is not None and os.path.exists(self.zip_path),
                 "error_message": self.error_message,
                 "created_at": self.created_at,
             }
@@ -258,9 +255,8 @@ class SiteDownloader:
                 job.status = "completed"
                 job.log_line(
                     f"Done. {job.pages_done} page(s), {job.assets_done} asset(s), "
-                    f"{job.errors_count} error(s)."
+                    f"{job.errors_count} error(s). Saved to: {job.output_dir}"
                 )
-                self._zip_output()
             else:
                 executor.shutdown(wait=False, cancel_futures=True)
         except Exception as exc:  # noqa: BLE001
@@ -374,6 +370,11 @@ class SiteDownloader:
             except Exception as exc:  # noqa: BLE001
                 job.increment_errors()
                 job.log_line(f"Asset failed ({abs_url}): {exc}")
+                # Point at the absolute live URL rather than leaving a possibly
+                # root-relative reference, which would resolve to the drive root
+                # (e.g. C:\...) when the saved page is opened from disk.
+                if abs_url.startswith(("http://", "https://")):
+                    tag[attr] = abs_url
 
         # srcset (multiple URLs with descriptors).
         for tag_name in _SRCSET_TAGS:
@@ -393,7 +394,7 @@ class SiteDownloader:
                     self._rewrite_css_text(style_tag.string, base_url, local_path)
                 )
 
-        # Anchors - crawl within scope, leave out-of-scope links pointing at the live site.
+        # Anchors - crawl within scope, point everything else at the live site.
         for a in soup.find_all("a", href=True):
             raw = a["href"]
             if raw.strip().lower().startswith(_PAGE_EXCLUDE_SCHEMES) or raw.startswith("#"):
@@ -405,7 +406,11 @@ class SiteDownloader:
                 new_page_links.append((abs_url, depth + 1))
                 target_local = url_to_local_path(abs_url, is_page=True)
                 a["href"] = relative_link(local_path, target_local) + (f"#{frag}" if frag else "")
-            # else: leave external link absolute so it still works online.
+            else:
+                # Rewrite out-of-scope links to their absolute URL so a
+                # root-/protocol-relative href never resolves to the local
+                # drive (C:\...) when the page is opened from disk.
+                a["href"] = abs_url + (f"#{frag}" if frag else "")
 
         if base_tag is not None:
             base_tag.decompose()
@@ -497,7 +502,7 @@ class SiteDownloader:
             try:
                 target_local = self._download_asset(abs_url)
             except Exception:  # noqa: BLE001
-                return match.group(0)
+                return f"url('{abs_url}')"
             rel = relative_link(referrer_local_path, target_local)
             return f"url('{rel}')"
 
@@ -511,7 +516,7 @@ class SiteDownloader:
             try:
                 target_local = self._download_asset(abs_url)
             except Exception:  # noqa: BLE001
-                return match.group(0)
+                return f"@import url('{abs_url}')"
             rel = relative_link(referrer_local_path, target_local)
             return f"@import url('{rel}')"
 
@@ -533,25 +538,9 @@ class SiteDownloader:
                 target_local = self._download_asset(abs_url)
                 rel = relative_link(referrer_local_path, target_local)
             except Exception:  # noqa: BLE001
-                rel = url_part
+                rel = abs_url if abs_url.startswith(("http://", "https://")) else url_part
             parts.append(f"{rel} {descriptor}".strip())
         return ", ".join(parts)
-
-    # --------------------------------------------------------------- zip
-
-    def _zip_output(self) -> None:
-        job = self.job
-        zip_path = job.output_dir.rstrip(os.sep) + ".zip"
-        job.log_line("Packaging ZIP archive...")
-        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-            for root, _dirs, files in os.walk(job.output_dir):
-                for name in files:
-                    full = os.path.join(root, name)
-                    arcname = os.path.relpath(full, job.output_dir)
-                    zf.write(full, arcname)
-        job.zip_path = zip_path
-        job.log_line("ZIP archive ready.")
-
 
 def new_job_id() -> str:
     return uuid.uuid4().hex[:12]

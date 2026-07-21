@@ -110,6 +110,18 @@ h1 {
   gap: 16px;
 }
 
+.folder-input {
+  display: flex !important;
+  gap: 8px;
+  margin-bottom: 0;
+}
+.folder-input input { flex: 1; }
+.folder-input .secondary-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding: 10px 16px;
+}
+
 .checkboxes { margin-bottom: 8px; }
 .checkbox {
   display: flex;

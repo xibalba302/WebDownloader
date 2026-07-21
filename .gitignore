@@ -2,7 +2,7 @@ __pycache__/
 *.pyc
 .venv/
 venv/
-jobs/*
-!jobs/.gitkeep
+downloads/
+jobs/
 *.zip
 .DS_Store
