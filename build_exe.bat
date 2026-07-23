@@ -1,11 +1,11 @@
 @echo off
 setlocal
-title Build WebDownloader.exe
+title Build Al Haitham Web Downloader
 cd /d "%~dp0"
 
-echo ============================================
-echo   Building WebDownloader.exe (standalone)
-echo ============================================
+echo ==================================================
+echo   Building AlHaithamWebDownloader.exe (standalone)
+echo ==================================================
 echo.
 
 rem --- Locate Python ---------------------------------------------------------
@@ -45,12 +45,12 @@ if errorlevel 1 (
 )
 
 echo.
-echo ============================================
+echo ==================================================
 echo   Done!  Your standalone app is here:
-echo       dist\WebDownloader.exe
+echo       dist\AlHaithamWebDownloader.exe
 echo.
 echo   Copy that single file to any Windows PC and
 echo   double-click it - no Python needed there.
-echo ============================================
+echo ==================================================
 echo.
 pause

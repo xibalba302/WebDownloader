@@ -1,12 +1,12 @@
-"""Package WebDownloader as a single standalone executable using PyInstaller.
+"""Package Al Haitham Web Downloader as a single standalone executable.
 
 Run on the platform you want the binary for:
 
     python build_exe.py
 
-On Windows this produces `dist/WebDownloader.exe` - a single file you can
-copy to any Windows PC and run without installing Python or anything else.
-(On macOS/Linux it produces a native single-file binary for that OS.)
+On Windows this produces `dist/AlHaithamWebDownloader.exe` - a single file
+you can copy to any Windows PC and run without installing Python or anything
+else. (On macOS/Linux it produces a native single-file binary for that OS.)
 """
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ def main() -> None:
 
     args = [
         sys.executable, "-m", "PyInstaller",
-        "--name", "WebDownloader",
+        "--name", "AlHaithamWebDownloader",
         "--onefile",
         "--clean",
         "--noconfirm",
@@ -50,7 +50,7 @@ def main() -> None:
     print("Running:", " ".join(args))
     subprocess.run(args, check=True, cwd=HERE)
 
-    exe = os.path.join(HERE, "dist", "WebDownloader" + (".exe" if os.name == "nt" else ""))
+    exe = os.path.join(HERE, "dist", "AlHaithamWebDownloader" + (".exe" if os.name == "nt" else ""))
     print("\nBuild complete.")
     print(f"Standalone executable: {exe}")
 
