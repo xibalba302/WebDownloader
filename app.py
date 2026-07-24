@@ -61,6 +61,17 @@ def _run_folder_dialog_and_exit() -> None:
 if FROZEN and _PICK_FOLDER_FLAG in sys.argv:
     _run_folder_dialog_and_exit()
 
+# When frozen, "install the headless browser" also can't shell out to python,
+# so we re-exec ourselves with this marker and run Playwright's installer.
+from webdownloader.browser import INSTALL_CHROMIUM_FLAG  # noqa: E402
+
+if FROZEN and INSTALL_CHROMIUM_FLAG in sys.argv:
+    from playwright.__main__ import main as _pw_main  # type: ignore
+
+    sys.argv = [sys.argv[0], "install", "chromium"]
+    _pw_main()
+    sys.exit(0)
+
 
 _RES_DIR = _resource_dir()
 # Default output location, used only when the user doesn't choose their own folder.
@@ -170,6 +181,7 @@ def start_job():
     max_depth = _parse_depth(data.get("max_depth"))
     same_domain_only = str(data.get("same_domain_only", "true")).lower() not in ("false", "0", "no")
     respect_robots = str(data.get("respect_robots", "true")).lower() not in ("false", "0", "no")
+    render_js = str(data.get("render_js", "false")).lower() in ("true", "1", "yes", "on")
 
     # Resolve the destination folder chosen by the user (or fall back to a
     # default folder next to the app). The mirror is written under
@@ -197,6 +209,7 @@ def start_job():
         max_depth=max_depth,
         same_domain_only=same_domain_only,
         respect_robots=respect_robots,
+        render_js=render_js,
     )
     with JOBS_LOCK:
         JOBS[job_id] = job

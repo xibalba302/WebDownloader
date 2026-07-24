@@ -102,6 +102,7 @@ class DownloadJob:
     max_depth: int  # < 0 means unlimited
     same_domain_only: bool
     respect_robots: bool
+    render_js: bool = False  # load pages in a headless browser (for JS sites)
     status: str = "queued"  # queued -> running -> completed | error | cancelled
     pages_done: int = 0
     assets_done: int = 0
@@ -184,9 +185,12 @@ class SiteDownloader:
         asset_workers: int = 10,
     ):
         self.job = job
-        self.timeout = timeout
-        self.page_workers = max(1, page_workers)
+        # Headless rendering is heavy (a real browser per page); render pages
+        # one at a time to keep memory sane. Static crawls stay parallel.
+        self.timeout = 45 if job.render_js else timeout
+        self.page_workers = 1 if job.render_js else max(1, page_workers)
         self.asset_workers = max(1, asset_workers)
+        self.renderer = None  # set up in run() when render_js is enabled
 
         self.session = requests.Session()
         self.session.headers.update({"User-Agent": DEFAULT_USER_AGENT})
@@ -251,9 +255,12 @@ class SiteDownloader:
             fut = executor.submit(self._safe_process_page, url, depth)
             futures[fut] = (url, depth)
 
-        submit(job.start_url, 0)
-
         try:
+            if job.render_js:
+                self._setup_renderer()
+
+            submit(job.start_url, 0)
+
             while futures:
                 if job._stop_requested:
                     job.status = "cancelled"
@@ -301,6 +308,28 @@ class SiteDownloader:
         finally:
             job.mark_finished()
             self.asset_executor.shutdown(wait=False, cancel_futures=True)
+            if self.renderer is not None:
+                self.renderer.close()
+
+    def _setup_renderer(self) -> None:
+        """Prepare the headless browser, downloading Chromium on first use."""
+        from . import browser as browser_mod
+
+        job = self.job
+        if not browser_mod.playwright_available():
+            raise RuntimeError(
+                "JavaScript rendering needs the 'playwright' package, which "
+                "isn't installed. Install it and try again."
+            )
+        if not browser_mod.chromium_installed():
+            job.log_line("Setting up the headless browser (one-time download, ~150 MB)...")
+            try:
+                browser_mod.install_chromium()
+            except Exception as exc:  # noqa: BLE001
+                raise RuntimeError(f"Couldn't set up the headless browser: {exc}") from exc
+            job.log_line("Headless browser ready.")
+        self.renderer = browser_mod.BrowserRenderer(timeout=self.timeout)
+        job.log_line("JavaScript rendering is ON.")
 
     # ------------------------------------------------------------ robots
 
@@ -347,11 +376,35 @@ class SiteDownloader:
             self._save_asset_bytes(url, resp.content, content_type)
             return []
 
-        html_text = _decode_html(resp.content, content_type)
+        page_url = url
+        if self.renderer is not None and "text/html" in content_type:
+            # Load in a headless browser so client-side-rendered content and
+            # links are present before we parse. Fall back to the static HTML
+            # if rendering fails for this page.
+            try:
+                html_text, final_url = self.renderer.render(url)
+                page_url = final_url or url
+            except Exception as exc:  # noqa: BLE001
+                job.log_line(f"JS render failed, using static HTML ({url}): {exc}")
+                html_text = _decode_html(resp.content, content_type)
+        else:
+            html_text = _decode_html(resp.content, content_type)
+
         soup = BeautifulSoup(html_text, "html.parser")
 
+        if self.renderer is not None:
+            # We've already captured the fully rendered DOM. Remove executable
+            # scripts so they don't re-run when the saved page is opened
+            # offline - which would rebuild the DOM using the site's original
+            # (live) links and wipe out our offline rewrites. Non-executable
+            # data blocks (JSON / ld+json) are kept.
+            _executable_types = {"", "text/javascript", "application/javascript", "module"}
+            for s in soup.find_all("script"):
+                if s.get("src") or (s.get("type") or "").lower() in _executable_types:
+                    s.decompose()
+
         base_tag = soup.find("base", href=True)
-        base_url = urljoin(url, base_tag["href"]) if base_tag else url
+        base_url = urljoin(page_url, base_tag["href"]) if base_tag else page_url
 
         local_path = url_to_local_path(url, is_page=True)
         self.url_to_local[normalize_url(url)] = local_path

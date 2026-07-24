@@ -138,6 +138,9 @@ h1 {
 }
 
 .checkboxes { margin-bottom: 8px; }
+.checkbox.render-js { margin-top: 4px; align-items: flex-start; }
+.checkbox.render-js input { margin-top: 3px; }
+.render-js + .hint { margin-top: 4px; margin-bottom: 4px; }
 .checkbox {
   display: flex;
   align-items: center;

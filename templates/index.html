@@ -65,6 +65,12 @@
         </label>
       </div>
 
+      <label class="checkbox render-js">
+        <input id="render_js" type="checkbox">
+        <span data-i18n="labelRenderJs">Render JavaScript (for modern sites that load content dynamically)</span>
+      </label>
+      <p class="hint" data-i18n="renderJsHint">Turn this on if a site downloads blank or with only one page. Uses a headless browser; downloads it once (~150 MB) the first time.</p>
+
       <button id="start-btn" class="primary-btn" type="submit" data-i18n="startBtn">Start download</button>
     </form>
     <p class="hint" data-i18n="hint">Only download sites you own or have permission to archive.</p>
