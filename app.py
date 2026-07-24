@@ -2,6 +2,10 @@
 
 Run with:  python app.py
 Then open http://127.0.0.1:5000 in your browser.
+
+Also runs as a standalone PyInstaller executable (see build_exe.py). When
+frozen, templates/static are read from the bundle and downloads are saved
+next to the .exe.
 """
 from __future__ import annotations
 
@@ -15,12 +19,59 @@ from flask import Flask, jsonify, redirect, render_template, request, send_from_
 
 from webdownloader.scraper import DownloadJob, SiteDownloader, new_job_id
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FROZEN = getattr(sys, "frozen", False)
+
+
+def _resource_dir() -> str:
+    """Where bundled templates/static live (PyInstaller temp dir when frozen)."""
+    if FROZEN:
+        return sys._MEIPASS  # type: ignore[attr-defined]
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+def _app_base_dir() -> str:
+    """A writable, persistent folder next to the app (not the temp bundle)."""
+    if FROZEN:
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+# --- Native folder picker helpers ---------------------------------------
+# When frozen, `sys.executable` is our own .exe (not python), so the picker
+# is invoked by re-launching ourselves with a marker argument that runs the
+# Tk dialog and prints the chosen path.
+_PICK_FOLDER_FLAG = "--pick-folder-dialog"
+
+
+def _run_folder_dialog_and_exit() -> None:
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+        path = filedialog.askdirectory(title="Choose download folder")
+        sys.stdout.write(path or "")
+    except Exception:  # noqa: BLE001
+        sys.exit(2)
+    sys.exit(0)
+
+
+if FROZEN and _PICK_FOLDER_FLAG in sys.argv:
+    _run_folder_dialog_and_exit()
+
+
+_RES_DIR = _resource_dir()
 # Default output location, used only when the user doesn't choose their own folder.
-DEFAULT_OUTPUT_ROOT = os.path.join(BASE_DIR, "downloads")
+DEFAULT_OUTPUT_ROOT = os.path.join(_app_base_dir(), "downloads")
 os.makedirs(DEFAULT_OUTPUT_ROOT, exist_ok=True)
 
-app = Flask(__name__)
+app = Flask(
+    __name__,
+    template_folder=os.path.join(_RES_DIR, "templates"),
+    static_folder=os.path.join(_RES_DIR, "static"),
+)
 JOBS: dict[str, DownloadJob] = {}
 JOBS_LOCK = threading.Lock()
 
@@ -54,22 +105,24 @@ def pick_folder():
 
     Because the app runs locally, the picker (Tk) shows on the user's own
     desktop. Runs in a short-lived subprocess so Tk stays out of Flask's
-    worker threads (Tk must own the main thread).
+    worker threads (Tk must own the main thread). When frozen we re-launch
+    our own executable with a marker flag; otherwise we run python -c.
     """
-    code = (
-        "import tkinter as tk\n"
-        "from tkinter import filedialog\n"
-        "root = tk.Tk()\n"
-        "root.withdraw()\n"
-        "root.attributes('-topmost', True)\n"
-        "path = filedialog.askdirectory(title='Choose download folder')\n"
-        "print(path or '')\n"
-    )
-    try:
-        result = subprocess.run(
-            [sys.executable, "-c", code],
-            capture_output=True, text=True, timeout=180,
+    if FROZEN:
+        argv = [sys.executable, _PICK_FOLDER_FLAG]
+    else:
+        code = (
+            "import tkinter as tk\n"
+            "from tkinter import filedialog\n"
+            "root = tk.Tk()\n"
+            "root.withdraw()\n"
+            "root.attributes('-topmost', True)\n"
+            "path = filedialog.askdirectory(title='Choose download folder')\n"
+            "import sys; sys.stdout.write(path or '')\n"
         )
+        argv = [sys.executable, "-c", code]
+    try:
+        result = subprocess.run(argv, capture_output=True, text=True, timeout=300)
         # A non-zero exit means the picker itself failed to open (e.g. no
         # display / Tk unavailable) rather than the user cancelling, which
         # returns an empty path with a clean exit.
@@ -193,5 +246,35 @@ def browse_site(job_id, path):
     return send_from_directory(job.output_dir, path)
 
 
+def _find_free_port(preferred: int = 5000) -> int:
+    """Use the preferred port if available, otherwise let the OS pick one."""
+    import socket
+
+    for port in (preferred, 0):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(("127.0.0.1", port))
+                return s.getsockname()[1]
+            except OSError:
+                continue
+    return preferred
+
+
+def main() -> None:
+    port = _find_free_port(5000)
+    url = f"http://127.0.0.1:{port}/"
+
+    # Auto-open the browser shortly after the server starts, so double-clicking
+    # the packaged .exe just opens the app. Skipped when NO_BROWSER is set.
+    if os.environ.get("WD_NO_BROWSER") != "1":
+        import webbrowser
+
+        threading.Timer(1.2, lambda: webbrowser.open(url)).start()
+
+    print(f"WebDownloader is running at {url}")
+    print("Close this window to stop the app.")
+    app.run(host="127.0.0.1", port=port, debug=False, use_reloader=False)
+
+
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=False, use_reloader=False)
+    main()

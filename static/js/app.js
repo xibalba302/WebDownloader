@@ -1,6 +1,7 @@
 const I18N = {
   en: {
-    title: "WebDownloader",
+    title: "Al Haitham Web Downloader",
+    tagline: "Full support for Arabic websites",
     subtitle: "Download a full website and browse it offline — all links, images, styles and fonts rewritten to work without internet.",
     labelUrl: "Website URL",
     labelMaxPages: "Max pages",
@@ -30,7 +31,8 @@ const I18N = {
     pickerUnavailable: "Couldn't open the folder picker. Type the folder path instead.",
   },
   ar: {
-    title: "ويب داونلودر",
+    title: "الهيثم لتحميل المواقع",
+    tagline: "دعم كامل للمواقع العربية",
     subtitle: "نزّل موقعاً كاملاً وتصفّحه دون اتصال بالإنترنت — تتم إعادة كتابة كل الروابط والصور والأنماط والخطوط لتعمل بلا اتصال.",
     labelUrl: "رابط الموقع",
     labelMaxPages: "الحد الأقصى للصفحات",

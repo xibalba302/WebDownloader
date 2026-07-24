@@ -1,14 +1,17 @@
-# WebDownloader
+# Al Haitham Web Downloader
+
+*(الهيثم لتحميل المواقع)*
 
 A simple web app that downloads (mirrors) a website for offline use: it
 crawls pages within the site, downloads every page, stylesheet, script,
 image and font it finds, and rewrites all the links so the result can be
 opened and browsed with no internet connection.
 
-The UI works in **English and Arabic** (with right-to-left layout and an
-Arabic-friendly font), and the crawler downloads any custom web fonts
-(`@font-face`, `.woff`/`.woff2`/`.ttf`) referenced by a site's CSS, so
-Arabic (and other) typography is preserved in the offline copy too.
+The UI works in **English and Arabic** (with right-to-left layout, an
+Arabic-friendly font, and a subtle Islamic geometric backdrop), and the
+crawler downloads any custom web fonts (`@font-face`, `.woff`/`.woff2`/
+`.ttf`) referenced by a site's CSS, so Arabic (and other) typography is
+preserved in the offline copy too.
 
 ## Features
 
@@ -42,7 +45,27 @@ Arabic (and other) typography is preserved in the offline copy too.
   file manager
 - Simple, bilingual (EN/AR) responsive UI, light/dark aware
 
-## Install & run
+## Build a standalone .exe (to share)
+
+To turn Al Haitham Web Downloader into a **single executable** that runs on
+any Windows PC with no Python installed, double-click **`build_exe.bat`**
+(or run `python build_exe.py`). It bundles the app, the web UI, and all
+dependencies with PyInstaller and produces:
+
+```
+dist\AlHaithamWebDownloader.exe
+```
+
+Copy that one file anywhere and double-click it — it starts the app and
+opens it in the default browser automatically. Close the console window to
+stop it. Downloads are saved to a `downloads` folder next to the .exe
+unless you pick another folder in the UI.
+
+> Build the .exe on the same OS you want to run it on (build on Windows for
+> a Windows `.exe`). The `build_exe.py` script also works on macOS/Linux,
+> producing a native single-file binary for that OS.
+
+## Install & run (from source)
 
 ### Windows
 
