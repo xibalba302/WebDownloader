@@ -326,7 +326,14 @@ class SiteDownloader:
             try:
                 browser_mod.install_chromium()
             except Exception as exc:  # noqa: BLE001
-                raise RuntimeError(f"Couldn't set up the headless browser: {exc}") from exc
+                raise RuntimeError(f"Couldn't download the headless browser: {exc}") from exc
+            # Verify it can actually launch now, so we fail with a clear
+            # message instead of silently saving blank (un-rendered) pages.
+            if not browser_mod.chromium_installed():
+                raise RuntimeError(
+                    "The headless browser was downloaded but still can't start. "
+                    "Try running the download again."
+                )
             job.log_line("Headless browser ready.")
         self.renderer = browser_mod.BrowserRenderer(timeout=self.timeout)
         job.log_line("JavaScript rendering is ON.")

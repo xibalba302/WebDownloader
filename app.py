@@ -21,6 +21,17 @@ from webdownloader.scraper import DownloadJob, SiteDownloader, new_job_id
 
 FROZEN = getattr(sys, "frozen", False)
 
+# Pin Playwright's browser cache to a stable, per-user folder BEFORE any
+# Playwright code runs. Without this, a frozen (PyInstaller) build looks for
+# Chromium inside its throwaway _MEIxxxx extraction dir - which changes every
+# launch - so the one-time download and the later launch never line up.
+# setdefault means an explicit environment override (or this sandbox's
+# preset PLAYWRIGHT_BROWSERS_PATH) still wins.
+os.environ.setdefault(
+    "PLAYWRIGHT_BROWSERS_PATH",
+    os.path.join(os.path.expanduser("~"), ".al-haitham-web-downloader", "browsers"),
+)
+
 
 def _resource_dir() -> str:
     """Where bundled templates/static live (PyInstaller temp dir when frozen)."""

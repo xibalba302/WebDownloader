@@ -155,6 +155,11 @@ is slower and downloads Chromium once (~150 MB) the first time you use it.
 Leave it **off** for normal server-rendered sites (WordPress, most news
 and blog sites) — they download fine without it and much faster.
 
+The headless browser is cached in `~/.al-haitham-web-downloader/browsers`
+(a fixed per-user folder), so it's downloaded only once and reused on
+later runs. Set the `PLAYWRIGHT_BROWSERS_PATH` environment variable before
+launching if you want it stored somewhere else.
+
 ## Known limitations
 
 - Highly interactive app behaviour (search, login-only content, infinite

@@ -31,16 +31,27 @@ def playwright_available() -> bool:
     return importlib.util.find_spec("playwright") is not None
 
 
-def chromium_installed() -> bool:
-    """True if a usable Chromium is present (managed by Playwright or overridden)."""
+def _launch_kwargs() -> dict:
+    kwargs = {"headless": True, "args": ["--no-sandbox"]}
     if _EXECUTABLE_OVERRIDE:
-        return os.path.exists(_EXECUTABLE_OVERRIDE)
+        kwargs["executable_path"] = _EXECUTABLE_OVERRIDE
+    return kwargs
+
+
+def chromium_installed() -> bool:
+    """True only if Chromium can actually launch.
+
+    We do a real (headless) launch rather than just checking that a file
+    exists: newer Playwright launches a separate ``chrome-headless-shell``
+    build, so the main Chromium binary being present isn't enough on its own.
+    """
     try:
         from playwright.sync_api import sync_playwright
 
         with sync_playwright() as pw:
-            path = pw.chromium.executable_path
-        return bool(path) and os.path.exists(path)
+            browser = pw.chromium.launch(**_launch_kwargs())
+            browser.close()
+        return True
     except Exception:  # noqa: BLE001
         return False
 
@@ -74,10 +85,7 @@ class BrowserRenderer:
             from playwright.sync_api import sync_playwright
 
             pw = sync_playwright().start()
-            launch_kwargs = {"headless": True, "args": ["--no-sandbox"]}
-            if _EXECUTABLE_OVERRIDE:
-                launch_kwargs["executable_path"] = _EXECUTABLE_OVERRIDE
-            browser = pw.chromium.launch(**launch_kwargs)
+            browser = pw.chromium.launch(**_launch_kwargs())
             tls.pw = pw
             tls.browser = browser
             with self._lock:
