@@ -12,6 +12,8 @@ const I18N = {
     browseFolderBtn: "Browse…",
     labelSameDomain: "Stay on the same domain",
     labelRobots: "Respect robots.txt",
+    labelRenderJs: "Render JavaScript (for modern sites that load content dynamically)",
+    renderJsHint: "Turn this on if a site downloads blank or with only one page. Uses a headless browser; downloads it once (~150 MB) the first time.",
     startBtn: "Start download",
     hint: "Only download sites you own or have permission to archive.",
     progressTitle: "Progress",
@@ -43,6 +45,8 @@ const I18N = {
     browseFolderBtn: "استعراض…",
     labelSameDomain: "الالتزام بنفس النطاق",
     labelRobots: "احترام ملف robots.txt",
+    labelRenderJs: "تشغيل جافاسكربت (للمواقع الحديثة التي تحمّل المحتوى ديناميكياً)",
+    renderJsHint: "فعّل هذا الخيار إذا نُزّل الموقع فارغاً أو بصفحة واحدة فقط. يستخدم متصفحاً خفياً يُنزَّل لمرة واحدة (حوالي ١٥٠ ميجابايت) في أول استخدام.",
     startBtn: "بدء التنزيل",
     hint: "لا تُنزّل إلا المواقع التي تملكها أو لديك إذن بأرشفتها.",
     progressTitle: "التقدّم",
@@ -121,6 +125,7 @@ form.addEventListener("submit", async (e) => {
     max_depth: document.getElementById("max_depth").value,
     same_domain_only: document.getElementById("same_domain_only").checked,
     respect_robots: document.getElementById("respect_robots").checked,
+    render_js: document.getElementById("render_js").checked,
   };
 
   startBtn.disabled = true;

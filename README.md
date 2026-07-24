@@ -36,6 +36,12 @@ preserved in the offline copy too.
   instead of 404-ing
 - Shows the elapsed download time (live while running, final when done)
   alongside the page/asset/error counts
+- Optional **JavaScript rendering** for modern sites (React/Vue/Angular
+  single-page apps) whose content and links are built in the browser: an
+  opt-in "Render JavaScript" mode loads each page in a headless Chromium,
+  captures the fully-rendered page, and saves a clean static snapshot.
+  Off by default; Chromium is downloaded once (~150 MB) the first time
+  you use it, not bundled with the app.
 - Optional `robots.txt` compliance (on by default)
 - Pages and assets download concurrently (6 pages / 10 assets at a time
   by default) instead of one request at a time, so crawls finish
@@ -133,10 +139,30 @@ considerately and keep an eye on the progress log.
   and provides the native folder picker / open-folder helpers.
 - `templates/index.html`, `static/` — the single-page UI.
 
+## JavaScript-heavy sites (SPAs)
+
+Some sites (React/Vue/Angular single-page apps) send an almost-empty HTML
+shell and build all the visible content and links in the browser with
+JavaScript. A plain crawl of those sites downloads a blank page and finds
+no links to follow (you'll see "1 page, a handful of files").
+
+For those, tick **Render JavaScript** before starting. Each page is then
+loaded in a real headless browser so the content and links appear, and a
+static snapshot is saved (the page's own scripts are stripped from the
+saved copy so they don't re-run and break the offline links). This mode
+is slower and downloads Chromium once (~150 MB) the first time you use it.
+
+Leave it **off** for normal server-rendered sites (WordPress, most news
+and blog sites) — they download fine without it and much faster.
+
+The headless browser is cached in `~/.al-haitham-web-downloader/browsers`
+(a fixed per-user folder), so it's downloaded only once and reused on
+later runs. Set the `PLAYWRIGHT_BROWSERS_PATH` environment variable before
+launching if you want it stored somewhere else.
+
 ## Known limitations
 
-- JavaScript that fetches resources dynamically at runtime (via `fetch`,
-  `import()`, etc.) is not rewritten — only static HTML/CSS references
-  are. Sites that render content client-side may not work fully offline.
-- Pages behind login or requiring JavaScript execution to reveal links
-  are not handled (no headless browser is used).
+- Highly interactive app behaviour (search, login-only content, infinite
+  scroll, actions that fetch data on click) can't be reproduced offline —
+  the snapshot captures the page as first rendered.
+- Pages behind a login are not downloaded (no credentials are entered).

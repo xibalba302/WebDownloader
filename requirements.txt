@@ -1,3 +1,7 @@
 Flask>=3.0,<4.0
 requests>=2.31,<3.0
 beautifulsoup4>=4.12,<5.0
+# Optional: only needed for the "Render JavaScript" mode. The Chromium
+# browser itself is NOT installed by pip - the app downloads it on first
+# use of that mode.
+playwright>=1.40

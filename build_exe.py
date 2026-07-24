@@ -31,6 +31,7 @@ def main() -> None:
     _ensure("Flask", "flask")
     _ensure("requests")
     _ensure("beautifulsoup4", "bs4")
+    _ensure("playwright")  # optional "Render JavaScript" mode
     _ensure("pyinstaller", "PyInstaller")
 
     args = [
@@ -45,6 +46,9 @@ def main() -> None:
         # The native folder picker uses tkinter; make sure it's included.
         "--hidden-import", "tkinter",
         "--hidden-import", "tkinter.filedialog",
+        # Bundle Playwright (its driver) so "Render JavaScript" works. The
+        # Chromium browser is NOT bundled - it's downloaded on first use.
+        "--collect-all", "playwright",
         "app.py",
     ]
     print("Running:", " ".join(args))
